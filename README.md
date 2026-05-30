@@ -1,8 +1,8 @@
 # Ops Copilot — complete reference
 
-[![ci](https://github.com/your-org/ops-copilot/actions/workflows/ci.yml/badge.svg)](https://github.com/your-org/ops-copilot/actions/workflows/ci.yml)
+[![ci](https://github.com/zyziyun/ops-copilot-complete/actions/workflows/ci.yml/badge.svg)](https://github.com/zyziyun/ops-copilot-complete/actions/workflows/ci.yml)
 
-Live URL: _<your-render-url>_ &nbsp;·&nbsp; replace the badge `your-org/ops-copilot` with your repo.
+**Live:** https://knflow.com/ops-copilot &nbsp;·&nbsp; API health: https://knflow.com/health
 
 An internal Ops/Support Copilot: a LangGraph ReAct agent that retrieves ops
 runbooks (RAG over pgvector + Postgres full-text), inspects live Postgres state
