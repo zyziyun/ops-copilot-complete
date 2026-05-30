@@ -78,6 +78,7 @@ def build_graph(checkpointer, model=None, tools=None):
             model=settings.chat_model,
             temperature=0,
             api_key=settings.openai_api_key,
+            stream_usage=True,  # emit token usage on the final streamed chunk
         )
     ).bind_tools(tools)
 

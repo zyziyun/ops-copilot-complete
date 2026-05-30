@@ -31,6 +31,21 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="ops-copilot", lifespan=lifespan)
 
+# USD per 1M tokens (input, output) — for the live cost estimate in the UI
+_PRICES = {"gpt-4o-mini": (0.15, 0.60), "gpt-4o": (2.50, 10.00)}
+
+
+def _usage(inp: int, out: int, model: str) -> dict:
+    pin, pout = _PRICES.get(model, (0.0, 0.0))
+    return {
+        "type": "usage",
+        "model": model,
+        "input_tokens": inp,
+        "output_tokens": out,
+        "total_tokens": inp + out,
+        "cost_usd": round(inp / 1e6 * pin + out / 1e6 * pout, 6),
+    }
+
 # the browser client is a different origin (:3000) than the API (:8000), so the
 # cross-origin fetch needs CORS or it fails with "Failed to fetch"
 app.add_middleware(
@@ -83,6 +98,7 @@ async def agent_stream(req: QueryReq):
     async def event_gen():
         # two stream modes at once: "updates" gives the trajectory (which tool
         # was called, each tool's result); "messages" streams the answer tokens.
+        in_tok = out_tok = 0
         async for mode, data in agent.astream(
             {"messages": [("user", req.question)]},
             cfg,
@@ -104,9 +120,15 @@ async def agent_stream(req: QueryReq):
                             )
             elif mode == "messages":
                 chunk, _meta = data
+                # token usage rides the final chunk of each LLM call (stream_usage)
+                um = getattr(chunk, "usage_metadata", None)
+                if um:
+                    in_tok += um.get("input_tokens", 0)
+                    out_tok += um.get("output_tokens", 0)
                 # only the LLM's answer tokens, not tool-call deltas or tool output
                 if chunk.__class__.__name__ == "AIMessageChunk" and chunk.content:
                     yield sse({"type": "token", "content": chunk.content})
+        yield sse(_usage(in_tok, out_tok, settings.chat_model))
         yield sse({"type": "done"})
 
     return StreamingResponse(event_gen(), media_type="text/event-stream")

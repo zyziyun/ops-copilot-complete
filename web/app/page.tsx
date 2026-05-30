@@ -9,10 +9,19 @@ type Step =
   | { kind: "tool_call"; name: string; args: Record<string, unknown> }
   | { kind: "tool_result"; name: string; content: string };
 
+type Usage = {
+  model: string;
+  input_tokens: number;
+  output_tokens: number;
+  total_tokens: number;
+  cost_usd: number;
+};
+
 export default function Home() {
   const [q, setQ] = useState("");
   const [steps, setSteps] = useState<Step[]>([]);
   const [answer, setAnswer] = useState("");
+  const [usage, setUsage] = useState<Usage | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -20,6 +29,7 @@ export default function Home() {
     if (!q.trim() || loading) return;
     setSteps([]);
     setAnswer("");
+    setUsage(null);
     setError("");
     setLoading(true);
     try {
@@ -53,6 +63,7 @@ export default function Home() {
           else if (evt.type === "tool_result")
             setSteps((s) => [...s, { kind: "tool_result", name: evt.name, content: evt.content }]);
           else if (evt.type === "token") setAnswer((a) => a + evt.content);
+          else if (evt.type === "usage") setUsage(evt as Usage);
         }
       }
     } catch (e) {
@@ -107,6 +118,13 @@ export default function Home() {
         <article className="answer">
           <ReactMarkdown remarkPlugins={[remarkGfm]}>{answer}</ReactMarkdown>
         </article>
+      )}
+
+      {usage && (
+        <div className="usage">
+          {usage.model} · {usage.input_tokens} in / {usage.output_tokens} out (
+          {usage.total_tokens} tokens) · ~${usage.cost_usd.toFixed(6)}
+        </div>
       )}
     </main>
   );
