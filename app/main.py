@@ -10,6 +10,8 @@ from pydantic import BaseModel
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from langgraph.types import Command
+
 from app.agent.runtime import close_agent, get_agent
 from app.config import settings
 from app.db import engine, get_session
@@ -66,6 +68,11 @@ class QueryReq(BaseModel):
     thread_id: str | None = None
 
 
+class ResumeReq(BaseModel):
+    thread_id: str
+    decision: str = "approve"  # "approve" or "deny"
+
+
 @app.get("/health")
 async def health(session: AsyncSession = Depends(get_session)):
     await session.execute(text("SELECT 1"))
@@ -86,49 +93,70 @@ async def query(req: QueryReq, session: AsyncSession = Depends(get_session)):
     return await generate(req.question, chunks)
 
 
+def _sse(obj: dict) -> str:
+    return f"data: {json.dumps(obj)}\n\n"
+
+
+async def _stream_run(agent, cfg, agent_input):
+    """Stream one agent run (initial or resumed) as typed SSE events. Two stream
+    modes at once: "updates" = the trajectory (which tool, each result),
+    "messages" = the answer tokens. If the run pauses at the write-approval gate,
+    emit an `approval_request` (instead of `done`) so the client can show
+    Approve/Deny."""
+    in_tok = out_tok = 0
+    async for mode, data in agent.astream(
+        agent_input, cfg, stream_mode=["updates", "messages"]
+    ):
+        if mode == "updates":
+            for payload in (data or {}).values():
+                # an interrupt update carries a tuple, not a {messages: ...} dict
+                if not isinstance(payload, dict):
+                    continue
+                for m in payload.get("messages", []):
+                    for call in getattr(m, "tool_calls", None) or []:
+                        yield _sse({"type": "tool_call", "name": call["name"],
+                                    "args": call["args"]})
+                    if m.__class__.__name__ == "ToolMessage":
+                        yield _sse({"type": "tool_result",
+                                    "name": getattr(m, "name", "tool"),
+                                    "content": (m.content or "")[:800]})
+        elif mode == "messages":
+            chunk, _meta = data
+            um = getattr(chunk, "usage_metadata", None)  # rides the final chunk
+            if um:
+                in_tok += um.get("input_tokens", 0)
+                out_tok += um.get("output_tokens", 0)
+            if chunk.__class__.__name__ == "AIMessageChunk" and chunk.content:
+                yield _sse({"type": "token", "content": chunk.content})
+
+    yield _sse(_usage(in_tok, out_tok, settings.chat_model))
+    snap = await agent.aget_state(cfg)
+    if snap.next and snap.tasks and snap.tasks[0].interrupts:
+        # paused before a write — ask the human (payload is what interrupt() got)
+        yield _sse({"type": "approval_request",
+                    "thread_id": cfg["configurable"]["thread_id"],
+                    **snap.tasks[0].interrupts[0].value})
+    else:
+        yield _sse({"type": "done"})
+
+
 @app.post("/agent/stream")
 async def agent_stream(req: QueryReq):
     agent = await get_agent()
     thread_id = req.thread_id or str(uuid.uuid4())
     cfg = {"configurable": {"thread_id": thread_id}}
+    return StreamingResponse(
+        _stream_run(agent, cfg, {"messages": [("user", req.question)]}),
+        media_type="text/event-stream",
+    )
 
-    def sse(obj: dict) -> str:
-        return f"data: {json.dumps(obj)}\n\n"
 
-    async def event_gen():
-        # two stream modes at once: "updates" gives the trajectory (which tool
-        # was called, each tool's result); "messages" streams the answer tokens.
-        in_tok = out_tok = 0
-        async for mode, data in agent.astream(
-            {"messages": [("user", req.question)]},
-            cfg,
-            stream_mode=["updates", "messages"],
-        ):
-            if mode == "updates":
-                for payload in (data or {}).values():
-                    for m in (payload or {}).get("messages", []):
-                        for call in getattr(m, "tool_calls", None) or []:
-                            yield sse(
-                                {"type": "tool_call", "name": call["name"],
-                                 "args": call["args"]}
-                            )
-                        if m.__class__.__name__ == "ToolMessage":
-                            yield sse(
-                                {"type": "tool_result",
-                                 "name": getattr(m, "name", "tool"),
-                                 "content": (m.content or "")[:800]}
-                            )
-            elif mode == "messages":
-                chunk, _meta = data
-                # token usage rides the final chunk of each LLM call (stream_usage)
-                um = getattr(chunk, "usage_metadata", None)
-                if um:
-                    in_tok += um.get("input_tokens", 0)
-                    out_tok += um.get("output_tokens", 0)
-                # only the LLM's answer tokens, not tool-call deltas or tool output
-                if chunk.__class__.__name__ == "AIMessageChunk" and chunk.content:
-                    yield sse({"type": "token", "content": chunk.content})
-        yield sse(_usage(in_tok, out_tok, settings.chat_model))
-        yield sse({"type": "done"})
-
-    return StreamingResponse(event_gen(), media_type="text/event-stream")
+@app.post("/agent/resume")
+async def agent_resume(req: ResumeReq):
+    """Resume a paused run after the human decides (approve/deny) on a write."""
+    agent = await get_agent()
+    cfg = {"configurable": {"thread_id": req.thread_id}}
+    return StreamingResponse(
+        _stream_run(agent, cfg, Command(resume=req.decision)),
+        media_type="text/event-stream",
+    )

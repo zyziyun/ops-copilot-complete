@@ -162,6 +162,35 @@ button:disabled {
   background: #f9fafb;
 }
 
+/* HITL approval panel */
+.approval {
+  margin-top: 18px;
+  padding: 12px 14px;
+  border: 1px solid #fcd34d;
+  background: #fffbeb;
+  border-radius: 10px;
+}
+
+.approval-title {
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.approval code {
+  display: block;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 13px;
+  margin-bottom: 10px;
+}
+
+.approval-btns button {
+  margin: 0 8px 0 0;
+}
+
+.approval-btns .deny {
+  background: #6b7280;
+}
+
 /* token + cost footer */
 .usage {
   margin-top: 16px;
