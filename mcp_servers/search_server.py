@@ -4,7 +4,11 @@ import os
 import httpx
 from mcp.server.fastmcp import FastMCP
 
-mcp = FastMCP("ops-search")
+mcp = FastMCP(
+    "ops-search",
+    host=os.environ.get("MCP_HOST", "0.0.0.0"),
+    port=int(os.environ.get("SEARCH_MCP_PORT", "8002")),
+)
 
 
 @mcp.tool()

@@ -5,12 +5,20 @@ becomes the tool name, type hints become the input schema, the docstring becomes
 the description. Each tool opens its own DB session and reuses the C2/C3 logic,
 so the agent does not care that these tools live behind MCP.
 """
+import os
+
 from mcp.server.fastmcp import FastMCP
 
 from app.agent.tools import get_db_connections, get_slow_queries, search_runbooks
 from app.db import SessionLocal
 
-mcp = FastMCP("ops-internal")
+# distinct port from the API (8000) and the search server (8002), so all three
+# can run side by side locally and in compose
+mcp = FastMCP(
+    "ops-internal",
+    host=os.environ.get("MCP_HOST", "0.0.0.0"),
+    port=int(os.environ.get("OPS_MCP_PORT", "8001")),
+)
 
 
 @mcp.tool()
