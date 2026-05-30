@@ -9,23 +9,19 @@ from app.models import Chunk
 
 log = logging.getLogger(__name__)
 
+TEXT_SUFFIXES = {".md", ".markdown", ".txt", ""}
+
 
 def load_text(path: str) -> str:
-    p = Path(path)
-    if p.suffix.lower() == ".pdf":
-        from pypdf import PdfReader  # pip install pypdf if you need PDFs
-
-        reader = PdfReader(str(p))
-        return "\n".join(page.extract_text() or "" for page in reader.pages)
-    return p.read_text(encoding="utf-8")
+    return Path(path).read_text(encoding="utf-8")
 
 
 def parse_front_matter(text: str) -> tuple[str, dict]:
     """Split optional ``--- ... ---`` YAML-ish front-matter off the top.
 
-    C2 tags every corpus file with ``source_system: <name>`` so retrieval can
-    filter and attribute by origin. We keep the parser tiny on purpose: one
-    ``key: value`` per line, no nesting.
+    C2 tags every corpus file with ``source_system: <name>``; any other keys
+    (title, severity, doc_type, url, …) become the chunk's structured
+    ``doc_metadata``. One ``key: value`` per line, no nesting.
     """
     meta: dict[str, str] = {}
     if text.startswith("---"):
@@ -50,16 +46,23 @@ def chunk_text(text: str, size: int = 1000, overlap: int = 150) -> list[str]:
 
 
 async def ingest_file(session: AsyncSession, path: str) -> int:
-    raw = load_text(path)
-    body, meta = parse_front_matter(raw)
-    source_system = meta.get("source_system", "unknown")
+    # lazy import breaks the ingest <-> multimodal cycle (multimodal reuses
+    # chunk_text from this module)
+    from app.rag.multimodal import build_units
 
-    chunks = chunk_text(body)
-    if not chunks:
+    p = Path(path)
+    if p.suffix.lower() in TEXT_SUFFIXES:
+        body, meta = parse_front_matter(load_text(path))
+    else:
+        body, meta = "", {}  # pdf/image: no front-matter
+    source_system = meta.pop("source_system", "unknown")
+
+    units = await build_units(path, body)
+    if not units:
         return 0
 
-    embeddings = await embed_texts(chunks)
-    source = Path(path).name
+    embeddings = await embed_texts([u["content"] for u in units])
+    source = p.name
 
     # idempotency: clear prior chunks for this source before re-inserting
     await session.execute(delete(Chunk).where(Chunk.source == source))
@@ -69,13 +72,21 @@ async def ingest_file(session: AsyncSession, path: str) -> int:
             Chunk(
                 source=source,
                 chunk_index=i,
-                content=c,
+                content=u["content"],
                 embedding=e,
                 source_system=source_system,
+                doc_metadata=meta,  # structured fields, queryable as JSONB
+                modality=u["modality"],
             )
-            for i, (c, e) in enumerate(zip(chunks, embeddings))
+            for i, (u, e) in enumerate(zip(units, embeddings))
         ]
     )
     await session.commit()
-    log.info("ingested %s (%s): %d chunks", source, source_system, len(chunks))
-    return len(chunks)
+    log.info(
+        "ingested %s (%s): %d units (%s)",
+        source,
+        source_system,
+        len(units),
+        ", ".join(sorted({u["modality"] for u in units})),
+    )
+    return len(units)
