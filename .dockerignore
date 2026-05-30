@@ -11,7 +11,8 @@ tests/
 .github/
 web/
 eval/
-data/
 *.md
+!data/
+!data/**
 .env
 .env.example
