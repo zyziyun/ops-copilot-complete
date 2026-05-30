@@ -36,7 +36,9 @@ async def get_agent():
             open=False,
             kwargs=_CONNECTION_KWARGS,
         )
-        await _pool.open()
+        # wait=True so the pool establishes its connections before setup() uses
+        # one — without it, psycopg-pool 3.3+ returns early and setup() hangs
+        await _pool.open(wait=True, timeout=10)
         saver = AsyncPostgresSaver(_pool)
         await saver.setup()  # creates checkpoint tables once
         _agent = build_graph(saver)

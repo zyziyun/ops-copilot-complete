@@ -71,7 +71,14 @@ def build_graph(checkpointer, model=None, tools=None):
     llm = (
         model
         if model is not None
-        else ChatOpenAI(model=settings.chat_model, temperature=0)
+        # pass the key from settings (.env) explicitly — ChatOpenAI otherwise
+        # only reads the OPENAI_API_KEY *process* env var, which our pydantic
+        # Settings does not export
+        else ChatOpenAI(
+            model=settings.chat_model,
+            temperature=0,
+            api_key=settings.openai_api_key,
+        )
     ).bind_tools(tools)
 
     async def agent_node(state: MessagesState):
