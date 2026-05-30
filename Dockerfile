@@ -12,6 +12,8 @@ WORKDIR /app
 COPY --from=builder /root/.local /root/.local
 COPY migrations/ ./migrations/
 COPY alembic.ini .
+COPY data/ ./data/
+COPY scripts/ ./scripts/
 ENV PATH=/root/.local/bin:$PATH
 EXPOSE 8000
 CMD ["gunicorn", "app.main:app", \
