@@ -26,7 +26,7 @@ test:
 	pytest -q
 
 lint:
-	ruff check app/ mcp_servers/ eval/
+	ruff check .
 
 serve:
 	uvicorn app.main:app --reload --port 8000

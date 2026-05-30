@@ -3,8 +3,7 @@ import pytest
 
 from app.agent import tools as tools_mod
 from app.agent.graph import build_graph
-from tests.fakes import ScriptedChatModel, ai_text, ai_tool_call
-from tests.helpers import requires_c3
+from app.testing import ScriptedChatModel, ai_text, ai_tool_call, requires_c3
 
 pytestmark = requires_c3  # skip until C3's graph + tools are implemented
 

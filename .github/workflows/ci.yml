@@ -22,7 +22,7 @@ jobs:
       - uses: actions/setup-python@v5
         with: { python-version: "3.12" }
       - run: pip install -r requirements.txt
-      - run: ruff check app/ mcp_servers/ eval/ # lint
+      - run: ruff check . # lint
       - run: alembic upgrade head # schema
       - run: python scripts/fetch_corpus.py # write data/*.md
       - run: python scripts/ingest_all.py # embed + store corpus

@@ -1,0 +1,17 @@
+# keep test + dev cruft out of the runtime image
+**/__pycache__/
+**/tests/
+**/conftest.py
+app/testing.py
+tests/
+.venv/
+.pytest_cache/
+.ruff_cache/
+.git/
+.github/
+web/
+eval/
+data/
+*.md
+.env
+.env.example

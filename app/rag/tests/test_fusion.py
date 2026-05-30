@@ -1,7 +1,7 @@
 from types import SimpleNamespace as NS
 
 from app.rag.fusion import rrf_merge
-from tests.helpers import requires_c2
+from app.testing import requires_c2
 
 pytestmark = requires_c2  # skip until C2's rrf_merge is implemented
 
