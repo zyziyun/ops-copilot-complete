@@ -22,3 +22,19 @@
 {"q": "relation does not exist after a migration, what now?", "expect_source": "postgres", "type": "far_leak", "scope": "postgres"}
 {"q": "Django migration conflict asks me to merge migrations, what is this?", "expect_source": "django", "type": "far_leak", "scope": "django"}
 {"q": "connection pool timeouts under burst, what application setting helps?", "expect_source": ["fastapi", "postgres"], "type": "near_neighbor"}
+{"q": "What does ERROR: deadlock detected mean and how do I fix it?", "expect_source": "postgres", "type": "exact"}
+{"q": "How do I deal with table bloat and autovacuum not keeping up?", "expect_source": "postgres", "type": "semantic"}
+{"q": "The database host is running out of disk, what do I check first?", "expect_source": "gitlab", "type": "semantic"}
+{"q": "pg_wal is growing, is it safe to delete files there?", "expect_source": "gitlab", "type": "semantic"}
+{"q": "What severity is connections over 90 percent of max?", "expect_source": "gitlab", "type": "semantic"}
+{"q": "How does the lifespan context manager help on startup?", "expect_source": "fastapi", "type": "semantic"}
+{"q": "How do FastAPI dependencies clean up a database session?", "expect_source": "fastapi", "type": "semantic"}
+{"q": "What is n_dead_tup and pg_stat_user_tables used for?", "expect_source": "postgres", "type": "exact"}
+{"q": "How do I prevent deadlocks by acquiring locks in a consistent order?", "expect_source": "postgres", "type": "semantic"}
+{"q": "How do I read pg_last_xact_replay_timestamp on a replica?", "expect_source": "gitlab", "type": "exact"}
+{"q": "What holds back the xmin horizon and blocks vacuum cleanup?", "expect_source": "postgres", "type": "semantic"}
+{"q": "How do I check the size of a database and pg_wal?", "expect_source": "gitlab", "type": "exact"}
+{"q": "Should I raise max_connections or add a connection pooler?", "expect_source": ["fastapi", "postgres"], "type": "near_neighbor"}
+{"q": "What does collectstatic have to do with static files not loading?", "expect_source": "django", "type": "exact"}
+{"q": "Is a Django migration failure a database server incident?", "expect_source": "django", "type": "far_leak", "scope": "django"}
+{"q": "After a deploy a single query is saturating the db, should I roll back?", "expect_source": "gitlab", "type": "semantic"}
