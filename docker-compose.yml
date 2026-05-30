@@ -70,5 +70,17 @@ services:
     ports:
       - "8002:8002"
 
+  web:
+    build:
+      context: ./web
+      args:
+        # baked into the client bundle; the browser reaches the API on the host
+        NEXT_PUBLIC_API_URL: http://localhost:8000
+    profiles: ["full"]
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+
 volumes:
   pgdata:
