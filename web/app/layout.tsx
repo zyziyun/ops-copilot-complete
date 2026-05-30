@@ -1,6 +1,8 @@
+import "./globals.css";
+
 export const metadata = {
   title: "Ops Copilot",
-  description: "Internal Ops/Support Copilot",
+  description: "Internal Ops/Support Copilot — streaming agent client",
 };
 
 export default function RootLayout({
