@@ -58,6 +58,39 @@ async def get_slow_queries(session: AsyncSession) -> str:
     return "\n".join(f"pid={r.pid} dur={r.dur} q={r.q}" for r in rows) or "none"
 
 
+async def get_table_sizes(session: AsyncSession) -> str:
+    """Return the largest tables by total on-disk size."""
+    rows = (
+        await session.execute(
+            text(
+                "SELECT relname, pg_size_pretty(pg_total_relation_size(relid)) AS size "
+                "FROM pg_catalog.pg_statio_user_tables "
+                "ORDER BY pg_total_relation_size(relid) DESC LIMIT 5"
+            )
+        )
+    ).all()
+    return "\n".join(f"{r.relname}: {r.size}" for r in rows) or "no user tables"
+
+
+async def get_locks(session: AsyncSession) -> str:
+    """Return current relation-level locks (useful for spotting blocking)."""
+    rows = (
+        await session.execute(
+            text(
+                "SELECT pid, mode, relation::regclass AS rel, granted "
+                "FROM pg_locks WHERE relation IS NOT NULL "
+                "ORDER BY granted, pid LIMIT 10"
+            )
+        )
+    ).all()
+    return (
+        "\n".join(
+            f"pid={r.pid} {r.mode} on {r.rel} granted={r.granted}" for r in rows
+        )
+        or "no locks"
+    )
+
+
 # --- write tools (require approval, see graph.approval_node) ---
 WRITE_TOOLS = {"terminate_query", "create_ticket", "restart_service"}
 
@@ -140,6 +173,20 @@ async def get_slow_queries_tool() -> str:
         return await get_slow_queries(s)
 
 
+@tool("get_table_sizes")
+async def get_table_sizes_tool() -> str:
+    """Return the largest tables by total on-disk size."""
+    async with SessionLocal() as s:
+        return await get_table_sizes(s)
+
+
+@tool("get_locks")
+async def get_locks_tool() -> str:
+    """Return current relation-level locks (spot blocking)."""
+    async with SessionLocal() as s:
+        return await get_locks(s)
+
+
 @tool("terminate_query")
 async def terminate_query_tool(pid: int) -> str:
     """Terminate a stuck backend query by pid. WRITE ACTION (needs approval)."""
@@ -180,6 +227,8 @@ TOOLS = [
     search_runbooks_tool,
     get_db_connections_tool,
     get_slow_queries_tool,
+    get_table_sizes_tool,
+    get_locks_tool,
     terminate_query_tool,
     create_ticket_tool,
     restart_service_tool,

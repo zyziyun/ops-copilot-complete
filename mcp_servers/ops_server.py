@@ -9,7 +9,13 @@ import os
 
 from mcp.server.fastmcp import FastMCP
 
-from app.agent.tools import get_db_connections, get_slow_queries, search_runbooks
+from app.agent.tools import (
+    get_db_connections,
+    get_locks,
+    get_slow_queries,
+    get_table_sizes,
+    search_runbooks,
+)
 from app.db import SessionLocal
 
 # distinct port from the API (8000) and the search server (8002), so all three
@@ -40,6 +46,20 @@ async def slow_queries() -> str:
     """Active queries running longer than 5 seconds."""
     async with SessionLocal() as session:
         return await get_slow_queries(session)
+
+
+@mcp.tool()
+async def table_sizes() -> str:
+    """Largest tables by total on-disk size."""
+    async with SessionLocal() as session:
+        return await get_table_sizes(session)
+
+
+@mcp.tool()
+async def locks() -> str:
+    """Current relation-level locks (spot blocking)."""
+    async with SessionLocal() as session:
+        return await get_locks(session)
 
 
 if __name__ == "__main__":
