@@ -1,3 +1,6 @@
+# Default `docker compose up -d` brings just Postgres (what C1 needs for local
+# dev with `uvicorn --reload`). `docker compose --profile full up --build` brings
+# the whole stack: db + migrate + api + the two MCP servers.
 services:
   db:
     image: pgvector/pgvector:pg16
@@ -14,5 +17,58 @@ services:
       interval: 3s
       timeout: 3s
       retries: 10
+
+  # one-shot: apply migrations, then exit. The app services wait for it.
+  migrate:
+    build: .
+    profiles: ["full"]
+    command: ["alembic", "upgrade", "head"]
+    env_file: .env # alembic loads app.config, which needs the keys present
+    environment:
+      DATABASE_URL: postgresql+asyncpg://app:app@db:5432/app
+    depends_on:
+      db:
+        condition: service_healthy
+
+  api:
+    build: .
+    profiles: ["full"]
+    env_file: .env # OPENAI_API_KEY, SEARCH_API_KEY
+    environment:
+      DATABASE_URL: postgresql+asyncpg://app:app@db:5432/app
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+
+  mcp-ops:
+    build: .
+    profiles: ["full"]
+    command: ["python", "-m", "mcp_servers.ops_server"]
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://app:app@db:5432/app
+      OPS_MCP_PORT: "8001"
+    ports:
+      - "8001:8001"
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+
+  mcp-search:
+    build: .
+    profiles: ["full"]
+    command: ["python", "-m", "mcp_servers.search_server"]
+    env_file: .env # SEARCH_API_KEY
+    environment:
+      SEARCH_MCP_PORT: "8002"
+    ports:
+      - "8002:8002"
+
 volumes:
   pgdata:
