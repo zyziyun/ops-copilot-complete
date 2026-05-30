@@ -1,14 +1,15 @@
-# --- builder ---
+# --- builder: build a wheel from pyproject and install it (+ deps) ---
 FROM python:3.12-slim AS builder
-WORKDIR /app
-COPY requirements.txt .
-RUN pip install --user --no-cache-dir -r requirements.txt
+WORKDIR /src
+COPY pyproject.toml ./
+COPY app/ ./app/
+COPY mcp_servers/ ./mcp_servers/
+RUN pip install --user --no-cache-dir .
 
-# --- runtime ---
+# --- runtime: copy the installed packages + migration assets only ---
 FROM python:3.12-slim
 WORKDIR /app
 COPY --from=builder /root/.local /root/.local
-COPY app/ ./app/
 COPY migrations/ ./migrations/
 COPY alembic.ini .
 ENV PATH=/root/.local/bin:$PATH
