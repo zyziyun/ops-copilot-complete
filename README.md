@@ -30,30 +30,47 @@ streaming client · Docker + gunicorn/uvicorn · GitHub Actions · Render.
 
 ## Quickstart (reproduces the end-to-end sequence)
 
+Dependencies live in `pyproject.toml` and are managed with
+[uv](https://docs.astral.sh/uv/) (the `Makefile` is just a thin task runner over
+`uv run`). Each target below has a `make` shortcut (`make setup`, `make ingest`,
+`make eval`, `make test`, …).
+
 ```bash
 # 0. config
 cp .env.example .env            # paste your real OPENAI_API_KEY + SEARCH_API_KEY
 
 # 1. deps + database
-python -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
+uv sync --extra dev             # creates .venv and installs everything (make setup)
 docker compose up -d            # Postgres 16 + pgvector
 
 # 2. schema
-alembic upgrade head            # extension + chunks + HNSW + tsvector/GIN + tickets
+uv run alembic upgrade head     # extension + chunks + HNSW + tsvector/GIN + tickets
 
 # 3. corpus → embed + store (idempotent)
-python scripts/fetch_corpus.py  # writes data/*.md with source_system front-matter
-python scripts/ingest_all.py    # or: curl -X POST :8000/ingest per file (see below)
+uv run python scripts/fetch_corpus.py   # writes data/*.md with source_system front-matter
+uv run python scripts/ingest_all.py     # or: curl -X POST :8000/ingest per file (below)
 
 # 4. measure retrieval (prints dense vs hybrid numbers + per-type breakdown)
-python -m eval.run_eval
+uv run python -m eval.run_eval
 
 # 5. serve
-uvicorn app.main:app --port 8000   # /health /ingest /query /agent/stream
+uv run uvicorn app.main:app --port 8000   # /health /ingest /query /agent/stream
 
 # 6. tests (the safety net: fusion, HITL, durable, injection run offline)
-pytest -q
+uv run pytest -q
+```
+
+Prefer pip? `pip install -e ".[dev]"` works too — `pyproject.toml` is the single
+source of truth either way.
+
+### Run the whole stack in containers
+
+`docker compose up -d` brings just Postgres (what local `uvicorn --reload` dev
+needs). To run the full stack — Postgres + migrations + API + both MCP servers:
+
+```bash
+docker compose --profile full up --build    # make full
+# API on :8000, ops MCP on :8001, search MCP on :8002
 ```
 
 Per-file ingest over HTTP (alternative to `ingest_all.py`):
@@ -109,11 +126,13 @@ asyncio.run(demo())
 ## MCP servers
 
 ```bash
-python -m mcp_servers.ops_server      # "ops-internal" over Streamable HTTP
-python -m mcp_servers.search_server   # "ops-search" (Tavily)
+uv run python -m mcp_servers.ops_server     # "ops-internal" → http://localhost:8001/mcp
+uv run python -m mcp_servers.search_server  # "ops-search"   → http://localhost:8002/mcp
 ```
 
-Inspect with the MCP Inspector, or connect by URL from Cursor / Claude Desktop.
+Each server binds its own port (`OPS_MCP_PORT` 8001, `SEARCH_MCP_PORT` 8002) so
+the two servers and the API (8000) run side by side. Inspect with the MCP
+Inspector, or connect by URL from Cursor / Claude Desktop.
 Internet-facing servers should add bearer-token auth (OAuth 2.1 is the
 production target per the 2025-11-25 MCP spec).
 
