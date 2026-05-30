@@ -1,6 +1,6 @@
 # Thin task runner over uv (the package/dependency tool). Dependencies live in
 # pyproject.toml; `uv sync` builds the venv and installs them.
-.PHONY: setup up full down migrate corpus ingest eval test lint serve mcp-ops mcp-search
+.PHONY: setup up full down migrate corpus ingest eval test lint serve mcp-ops mcp-search inspect
 
 setup:
 	uv sync --extra dev
@@ -40,3 +40,7 @@ mcp-ops:
 
 mcp-search:
 	uv run python -m mcp_servers.search_server # http://localhost:8002/mcp
+
+inspect:
+	# MCP Inspector UI — connect it to http://localhost:8001/mcp or :8002/mcp
+	npx @modelcontextprotocol/inspector
