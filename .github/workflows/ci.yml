@@ -1,0 +1,38 @@
+name: ci
+on:
+  push: { branches: [main] }
+  pull_request: { branches: [main] }
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env: { POSTGRES_USER: app, POSTGRES_PASSWORD: app, POSTGRES_DB: app }
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U app" --health-interval 3s
+          --health-timeout 3s --health-retries 10
+    env:
+      DATABASE_URL: postgresql+asyncpg://app:app@localhost:5432/app
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      SEARCH_API_KEY: ${{ secrets.SEARCH_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install -r requirements.txt
+      - run: ruff check app/ mcp_servers/ eval/ # lint
+      - run: alembic upgrade head # schema
+      - run: python scripts/fetch_corpus.py # write data/*.md
+      - run: python scripts/ingest_all.py # embed + store corpus
+      - run: pytest -q # unit + HITL + injection + durable
+      - run: python -m eval.run_eval --gate # fail if faithfulness below floor
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+      - run: curl -fsSL "$RENDER_DEPLOY_HOOK" # deploy on green only
+        env: { RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }} }
