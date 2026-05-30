@@ -1,3 +1,4 @@
+import json
 import logging
 import uuid
 from contextlib import asynccontextmanager
@@ -76,13 +77,36 @@ async def agent_stream(req: QueryReq):
     thread_id = req.thread_id or str(uuid.uuid4())
     cfg = {"configurable": {"thread_id": thread_id}}
 
+    def sse(obj: dict) -> str:
+        return f"data: {json.dumps(obj)}\n\n"
+
     async def event_gen():
-        async for chunk in agent.astream(
-            {"messages": [("user", req.question)]}, cfg, stream_mode="messages"
+        # two stream modes at once: "updates" gives the trajectory (which tool
+        # was called, each tool's result); "messages" streams the answer tokens.
+        async for mode, data in agent.astream(
+            {"messages": [("user", req.question)]},
+            cfg,
+            stream_mode=["updates", "messages"],
         ):
-            token = getattr(chunk[0], "content", "")
-            if token:
-                yield f"data: {token}\n\n"
-        yield "data: [DONE]\n\n"
+            if mode == "updates":
+                for payload in (data or {}).values():
+                    for m in (payload or {}).get("messages", []):
+                        for call in getattr(m, "tool_calls", None) or []:
+                            yield sse(
+                                {"type": "tool_call", "name": call["name"],
+                                 "args": call["args"]}
+                            )
+                        if m.__class__.__name__ == "ToolMessage":
+                            yield sse(
+                                {"type": "tool_result",
+                                 "name": getattr(m, "name", "tool"),
+                                 "content": (m.content or "")[:800]}
+                            )
+            elif mode == "messages":
+                chunk, _meta = data
+                # only the LLM's answer tokens, not tool-call deltas or tool output
+                if chunk.__class__.__name__ == "AIMessageChunk" and chunk.content:
+                    yield sse({"type": "token", "content": chunk.content})
+        yield sse({"type": "done"})
 
     return StreamingResponse(event_gen(), media_type="text/event-stream")
