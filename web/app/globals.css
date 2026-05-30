@@ -4,6 +4,7 @@
   --border: #e5e7eb;
   --accent: #2563eb;
   --bg: #ffffff;
+  --code-bg: #f3f4f6;
 }
 
 * {
@@ -17,6 +18,7 @@ body {
   background: var(--bg);
   color: var(--fg);
   font-family: system-ui, -apple-system, sans-serif;
+  line-height: 1.5;
 }
 
 textarea,
@@ -57,4 +59,105 @@ button:disabled {
   border-radius: 8px;
   background: #fef2f2;
   color: #b91c1c;
+}
+
+/* agent trace */
+.trace {
+  margin-top: 20px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: #fafafa;
+}
+
+.trace-title {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+
+.step {
+  margin: 6px 0;
+  font-size: 14px;
+}
+
+.step code,
+.step pre {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 13px;
+}
+
+.step-result summary {
+  cursor: pointer;
+}
+
+.step pre {
+  margin: 6px 0 0;
+  padding: 8px;
+  background: var(--code-bg);
+  border-radius: 6px;
+  white-space: pre-wrap;
+  overflow-x: auto;
+}
+
+.badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: #dbeafe;
+  color: #1e40af;
+  margin-right: 6px;
+}
+
+.badge-ok {
+  background: #dcfce7;
+  color: #166534;
+}
+
+/* rendered markdown answer */
+.answer {
+  margin-top: 20px;
+  border-top: 1px solid var(--border);
+  padding-top: 14px;
+}
+
+.answer pre {
+  background: var(--code-bg);
+  padding: 10px;
+  border-radius: 6px;
+  overflow-x: auto;
+}
+
+.answer code {
+  background: var(--code-bg);
+  padding: 1px 4px;
+  border-radius: 4px;
+  font-size: 0.9em;
+}
+
+.answer pre code {
+  padding: 0;
+  background: none;
+}
+
+.answer table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 10px 0;
+}
+
+.answer th,
+.answer td {
+  border: 1px solid var(--border);
+  padding: 6px 10px;
+  text-align: left;
+}
+
+.answer th {
+  background: #f9fafb;
 }
