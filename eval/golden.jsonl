@@ -1,0 +1,24 @@
+{"q": "How do I troubleshoot Postgres replication lag?", "expect_source": "gitlab", "type": "semantic"}
+{"q": "What does FATAL: could not create any TCP/IP sockets mean?", "expect_source": "postgres", "type": "exact"}
+{"q": "How do I configure pg_hba.conf authentication?", "expect_source": "postgres", "type": "exact"}
+{"q": "Why am I getting NoReverseMatch in Django?", "expect_source": "django", "type": "exact"}
+{"q": "My database got slow after a deploy, where do I start?", "expect_source": "gitlab", "type": "semantic"}
+{"q": "How should I configure the database connection pool?", "expect_source": ["fastapi", "postgres"], "type": "near_neighbor"}
+{"q": "Too many connections errors under load, what do I tune?", "expect_source": ["fastapi", "postgres"], "type": "near_neighbor"}
+{"q": "Migration failed, what do I check?", "expect_source": "postgres", "type": "far_leak", "scope": "postgres"}
+{"q": "What is the runbook when connections approach max_connections?", "expect_source": "gitlab", "type": "semantic"}
+{"q": "How do I find idle in transaction sessions and stuck backends?", "expect_source": "gitlab", "type": "semantic"}
+{"q": "What does the error sorry, too many connections indicate?", "expect_source": "postgres", "type": "exact"}
+{"q": "I see no pg_hba.conf entry for host, what is wrong?", "expect_source": "postgres", "type": "exact"}
+{"q": "What does TemplateDoesNotExist mean in Django?", "expect_source": "django", "type": "exact"}
+{"q": "Why are static files not loading in production with Django?", "expect_source": "django", "type": "semantic"}
+{"q": "What is the difference between pool_size and max_connections?", "expect_source": ["fastapi", "postgres"], "type": "near_neighbor"}
+{"q": "How do I bound pool_size and max_overflow in the app?", "expect_source": ["fastapi", "postgres"], "type": "near_neighbor"}
+{"q": "When should an endpoint be async def versus def?", "expect_source": "fastapi", "type": "semantic"}
+{"q": "How do I check pg_stat_replication and pg_stat_wal_receiver?", "expect_source": "gitlab", "type": "semantic"}
+{"q": "Where do I look when a query is saturating the database after a release?", "expect_source": "gitlab", "type": "semantic"}
+{"q": "How do I set listen_addresses and port for Postgres?", "expect_source": "postgres", "type": "exact"}
+{"q": "What authentication method should a pg_hba.conf line use, like scram-sha-256?", "expect_source": "postgres", "type": "exact"}
+{"q": "relation does not exist after a migration, what now?", "expect_source": "postgres", "type": "far_leak", "scope": "postgres"}
+{"q": "Django migration conflict asks me to merge migrations, what is this?", "expect_source": "django", "type": "far_leak", "scope": "django"}
+{"q": "connection pool timeouts under burst, what application setting helps?", "expect_source": ["fastapi", "postgres"], "type": "near_neighbor"}
