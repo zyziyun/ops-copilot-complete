@@ -2,7 +2,7 @@ from datetime import datetime
 
 from pgvector.sqlalchemy import Vector
 from sqlalchemy import Computed, DateTime, Integer, String, Text, func
-from sqlalchemy.dialects.postgresql import TSVECTOR
+from sqlalchemy.dialects.postgresql import JSONB, TSVECTOR
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.config import settings
@@ -26,6 +26,15 @@ class Chunk(Base):
         TSVECTOR,
         Computed("to_tsvector('english', content)", persisted=True),
         nullable=True,
+    )
+    # advanced: structured fields co-located with the vector (severity, doc_type,
+    # title, updated_at, …), filterable via JSONB containment
+    doc_metadata: Mapped[dict] = mapped_column(
+        JSONB, server_default="{}", nullable=False
+    )
+    # advanced: how this chunk was produced — text | table | image
+    modality: Mapped[str] = mapped_column(
+        String(16), server_default="text", index=True
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
