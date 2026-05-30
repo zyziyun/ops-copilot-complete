@@ -1,12 +1,5 @@
-"""Durable agent runtime backed by the same Postgres as the data layer.
-
-NOTE on the checkpointer wiring: ``AsyncPostgresSaver.from_conn_string(url)``
-returns an async *context manager*, so the connection it opens would be closed
-as soon as the ``with`` block exits — useless for a long-lived web process.
-Instead we open one persistent ``AsyncConnectionPool`` at startup and hand it to
-the saver. psycopg needs ``autocommit=True`` and ``prepare_threshold=0`` for the
-checkpointer's statements to work.
-"""
+"""Durable agent runtime: a process-wide agent backed by a persistent psycopg
+connection pool to the same Postgres, so runs survive restarts by thread_id."""
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 from psycopg_pool import AsyncConnectionPool
 
@@ -23,11 +16,6 @@ _agent = None
 
 
 async def get_agent():
-    """Return a process-wide singleton agent compiled with the Postgres saver.
-
-    Every run is keyed by a ``thread_id``; the same id resumes the same
-    conversation from its last checkpoint, even in a fresh process.
-    """
     global _pool, _agent
     if _agent is None:
         _pool = AsyncConnectionPool(
@@ -36,11 +24,11 @@ async def get_agent():
             open=False,
             kwargs=_CONNECTION_KWARGS,
         )
-        # wait=True so the pool establishes its connections before setup() uses
-        # one — without it, psycopg-pool 3.3+ returns early and setup() hangs
+        # wait=True so connections exist before setup() uses one; without it
+        # psycopg-pool 3.3+ returns early and setup() hangs
         await _pool.open(wait=True, timeout=10)
         saver = AsyncPostgresSaver(_pool)
-        await saver.setup()  # creates checkpoint tables once
+        await saver.setup()
         _agent = build_graph(saver)
     return _agent
 

@@ -17,22 +17,17 @@ class Chunk(Base):
     chunk_index: Mapped[int] = mapped_column(Integer)
     content: Mapped[str] = mapped_column(Text)
     embedding: Mapped[list[float]] = mapped_column(Vector(settings.embed_dim))
-    # C2: which of the four corpora this chunk came from (gitlab/postgres/fastapi/django)
     source_system: Mapped[str] = mapped_column(
         String(32), server_default="unknown", index=True
     )
-    # C2: generated full-text column, computed by Postgres, indexed with GIN
     content_tsv: Mapped[str | None] = mapped_column(
         TSVECTOR,
         Computed("to_tsvector('english', content)", persisted=True),
         nullable=True,
     )
-    # advanced: structured fields co-located with the vector (severity, doc_type,
-    # title, updated_at, …), filterable via JSONB containment
     doc_metadata: Mapped[dict] = mapped_column(
         JSONB, server_default="{}", nullable=False
     )
-    # advanced: how this chunk was produced — text | table | image
     modality: Mapped[str] = mapped_column(
         String(16), server_default="text", index=True
     )

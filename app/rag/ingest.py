@@ -19,9 +19,8 @@ def load_text(path: str) -> str:
 def parse_front_matter(text: str) -> tuple[str, dict]:
     """Split optional ``--- ... ---`` YAML-ish front-matter off the top.
 
-    C2 tags every corpus file with ``source_system: <name>``; any other keys
-    (title, severity, doc_type, url, …) become the chunk's structured
-    ``doc_metadata``. One ``key: value`` per line, no nesting.
+    ``source_system`` becomes its own column; any other keys (title, severity,
+    doc_type, url, …) become the chunk's structured ``doc_metadata``.
     """
     meta: dict[str, str] = {}
     if text.startswith("---"):
