@@ -13,9 +13,17 @@ class Settings(BaseSettings):
     # web search (Tavily) — optional so the rest of the stack runs without it
     search_api_key: str = ""
 
+    # CORS: comma-separated allowed origins for the browser client; "*" = all
+    cors_origins: str = "*"
+
     # pool sizing — see C1 Concept block B
     pool_size: int = 10
     max_overflow: int = 20
+
+    @property
+    def cors_origin_list(self) -> list[str]:
+        s = self.cors_origins.strip()
+        return ["*"] if s == "*" else [o.strip() for o in s.split(",") if o.strip()]
 
     @property
     def checkpoint_url(self) -> str:

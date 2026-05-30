@@ -3,12 +3,14 @@ import uuid
 from contextlib import asynccontextmanager
 
 from fastapi import Depends, FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.agent.runtime import close_agent, get_agent
+from app.config import settings
 from app.db import engine, get_session
 from app.rag.generate import generate
 from app.rag.ingest import ingest_file
@@ -27,6 +29,15 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="ops-copilot", lifespan=lifespan)
+
+# the browser client is a different origin (:3000) than the API (:8000), so the
+# cross-origin fetch needs CORS or it fails with "Failed to fetch"
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.cors_origin_list,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 class IngestReq(BaseModel):
