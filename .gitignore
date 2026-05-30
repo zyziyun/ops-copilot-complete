@@ -5,6 +5,8 @@ __pycache__/
 *.pyc
 .pytest_cache/
 .ruff_cache/
+.idea/
+.vscode/
 node_modules/
 web/.next/
 data/*.md
