@@ -79,6 +79,15 @@ async def health(session: AsyncSession = Depends(get_session)):
     return {"status": "ok"}
 
 
+@app.get("/model")
+async def model_info():
+    return {
+        "chat_model": settings.chat_model,
+        "embed_model": settings.embed_model,
+        "local": bool(settings.ollama_base_url),
+    }
+
+
 @app.post("/ingest")
 async def ingest(req: IngestReq, session: AsyncSession = Depends(get_session)):
     n = await ingest_file(session, req.path)

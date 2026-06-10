@@ -69,21 +69,20 @@ def route_after_approval(state: MessagesState) -> str:
     return "agent" if isinstance(state["messages"][-1], ToolMessage) else "tools"
 
 
+def _build_llm():
+    kwargs = dict(model=settings.chat_model, temperature=0, stream_usage=True)
+    if settings.ollama_base_url:
+        kwargs["openai_api_base"] = settings.ollama_base_url
+        kwargs["api_key"] = "ollama"
+        kwargs["timeout"] = 300
+    else:
+        kwargs["api_key"] = settings.openai_api_key
+    return ChatOpenAI(**kwargs)
+
+
 def build_graph(checkpointer, model=None, tools=None):
     tools = tools if tools is not None else TOOLS
-    llm = (
-        model
-        if model is not None
-        # pass the key from settings (.env) explicitly — ChatOpenAI otherwise
-        # only reads the OPENAI_API_KEY *process* env var, which our pydantic
-        # Settings does not export
-        else ChatOpenAI(
-            model=settings.chat_model,
-            temperature=0,
-            api_key=settings.openai_api_key,
-            stream_usage=True,  # emit token usage on the final streamed chunk
-        )
-    ).bind_tools(tools)
+    llm = (model if model is not None else _build_llm()).bind_tools(tools)
 
     async def agent_node(state: MessagesState):
         msgs = state["messages"]

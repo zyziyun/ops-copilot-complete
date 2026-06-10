@@ -1,9 +1,11 @@
 "use client";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+
+type ModelInfo = { chat_model: string; embed_model: string; local: boolean };
 
 type Step =
   | { kind: "tool_call"; name: string; args: Record<string, unknown> }
@@ -37,7 +39,15 @@ export default function Home() {
   const [approval, setApproval] = useState<Approval | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [modelInfo, setModelInfo] = useState<ModelInfo | null>(null);
   const threadId = useRef<string>("");
+
+  useEffect(() => {
+    fetch(`${API_URL}/model`)
+      .then((r) => r.json())
+      .then(setModelInfo)
+      .catch(() => {});
+  }, []);
 
   async function consume(res: Response) {
     if (!res.ok || !res.body) {
@@ -116,6 +126,20 @@ export default function Home() {
     <main style={{ maxWidth: 720, margin: "40px auto", padding: "0 16px" }}>
       <h1>Ops Copilot</h1>
       <p className="muted">Describe an alert or symptom; the agent shows its steps, then answers.</p>
+      {modelInfo && (
+        <div style={{
+          display: "inline-flex", alignItems: "center", gap: 6,
+          padding: "4px 10px", borderRadius: 6, fontSize: 13,
+          background: modelInfo.local ? "#f0fdf4" : "#eff6ff",
+          border: `1px solid ${modelInfo.local ? "#bbf7d0" : "#bfdbfe"}`,
+          color: modelInfo.local ? "#166534" : "#1e40af",
+          marginBottom: 12,
+        }}>
+          <span style={{ fontSize: 10 }}>{modelInfo.local ? "🟢" : "☁️"}</span>
+          <span style={{ fontWeight: 500 }}>{modelInfo.chat_model}</span>
+          <span style={{ opacity: 0.6 }}>· embed: {modelInfo.embed_model}</span>
+        </div>
+      )}
       <textarea
         value={q}
         onChange={(e) => setQ(e.target.value)}

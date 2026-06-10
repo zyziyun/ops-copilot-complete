@@ -4,13 +4,14 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
-    openai_api_key: str
+    openai_api_key: str = "not-needed"
     database_url: str
     embed_model: str = "text-embedding-3-small"
     chat_model: str = "gpt-4o-mini"
-    embed_dim: int = 1536  # text-embedding-3-small
+    embed_dim: int = 1536
 
-    # web search (Tavily) — optional so the rest of the stack runs without it
+    ollama_base_url: str = ""
+
     search_api_key: str = ""
 
     # CORS: comma-separated allowed origins for the browser client; "*" = all
